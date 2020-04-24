@@ -14,36 +14,24 @@ public class SocketObject {
 	}
 }
 
-
-class Player {
-	public double x;
-	public double y;
-	public int angle = 0;
-	public int id;
-	public UUID uuid;
-	
-	public Player(double x, double y, int id, UUID uuid) {
-		this.x = x;
-		this.y = y;
-		this.id = id;
-		this.uuid = uuid;
-	}
-}
-
 class PlayerData {
 	public String x;
 	public String y;
 	public String angle;
 	public String id;
+	public String type;
+	public String animation;
 	
 	public PlayerData() {
 		
 	}
 	
-	public PlayerData(String x, String y, String angle, String id) {
+	public PlayerData(String x, String y, String angle, String id, String type, String animation) {
 		this.x = x;
 		this.y = y;
 		this.angle = angle;
 		this.id = id;
+		this.type = type;
+		this.animation = animation;
 	}
 }

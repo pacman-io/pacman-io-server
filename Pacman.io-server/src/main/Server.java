@@ -13,6 +13,7 @@ import com.corundumstudio.socketio.listener.DisconnectListener;
 
 import java.util.HashMap;
 import java.util.UUID;
+import java.util.ArrayList;
 import java.util.Calendar;
 
 public class Server {
@@ -21,9 +22,15 @@ public class Server {
 		Configuration config = new Configuration();
 		config.setHostname("localhost");
 		config.setPort(9092);
+		
 
 		ServerThread st = new ServerThread(config);
 		st.start();
+	}
+	
+	
+	public void createServer(int port) {
+		
 	}
 
 }
@@ -32,6 +39,8 @@ class ServerThread extends Thread {
 	private SocketIOServer server;
 	private boolean isTerminated = false;
 	private HashMap<Integer, Player> players = new HashMap<Integer, Player>();
+	private HashMap<Integer, Pacman> pacmans = new HashMap<Integer, Pacman>();
+	private HashMap<Integer, Ghost> ghosts = new HashMap<Integer, Ghost>();
 	private int playerID = 1;
 
 	public ServerThread(Configuration config) {
@@ -50,7 +59,15 @@ class ServerThread extends Thread {
 				for(Player p : players.values()) {
 					if(client.getSessionId().equals(p.uuid)) {
 						players.remove(p.id);
-						server.getBroadcastOperations().sendEvent("remove", p.id);
+						if(p.getClass() == Pacman.class) {
+							pacmans.remove(p.id);
+							server.getBroadcastOperations().sendEvent("remove", p.id, "pacman");
+						}
+							
+						else if(p.getClass() == Ghost.class) {
+							ghosts.remove(p.id);
+							server.getBroadcastOperations().sendEvent("remove", p.id, "ghost");
+						}
 					}
 				}
 			}
@@ -59,10 +76,22 @@ class ServerThread extends Thread {
 		server.addEventListener("newplayer", SocketObject.class, new DataListener<SocketObject>() {
 			@Override
 			public void onData(SocketIOClient client, SocketObject data, AckRequest ackSender) throws Exception {
-				Player p = new Player(13.0 * 16.0 + 8.0, 26.0 * 16.0 + 8.0, playerID, client.getSessionId());
-				players.put(playerID++, p);
-				client.sendEvent("allplayers", players.values());
-				server.getBroadcastOperations().sendEvent("newplayer", client, p);
+				if(players.isEmpty()) {
+					Pacman p = new Pacman(13.0 * 16.0 + 8.0, 26.0 * 16.0 + 8.0, playerID, client.getSessionId());
+					players.put(playerID, p);
+					pacmans.put(playerID++, p);
+					client.sendEvent("allpacmans", pacmans.values());
+					client.sendEvent("allghosts", ghosts.values());
+					server.getBroadcastOperations().sendEvent("newpacman", client, p);
+				}
+				else {
+					Ghost g = new Ghost(13.0 * 16.0 + 8.0, 26.0 * 16.0 + 8.0, playerID, client.getSessionId());
+					players.put(playerID, g);
+					ghosts.put(playerID++, g);
+					client.sendEvent("allpacmans", pacmans.values());
+					client.sendEvent("allghosts", ghosts.values());
+					server.getBroadcastOperations().sendEvent("newghost", client, g);
+				}
 			}
 		});
 
@@ -75,7 +104,7 @@ class ServerThread extends Thread {
 					p.x = Double.parseDouble(data.x);
 					p.y = Double.parseDouble(data.y);
 					p.angle = Integer.parseInt(data.angle);
-					server.getBroadcastOperations().sendEvent("playermovemnet", client, p);
+					server.getBroadcastOperations().sendEvent("playermovemnet", client, p, data.type);
 				}
 
 			}
@@ -98,6 +127,10 @@ class ServerThread extends Thread {
 
 		}
 		server.stop();
+	}
+	
+	private void createGhost() {
+		
 	}
 }
 
