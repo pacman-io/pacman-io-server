@@ -13,6 +13,12 @@ public class DatabaseMutator {
 	public DatabaseMutator() {
 	}
 	
+	/*
+	 * Attempts to add results to MySQL Database
+	 * Returns "FAILED: NO_MATCHING_ACCOUNT" if there is no matching account for user
+	 * Returns "FAILED: SQL_ERROR" if there is an internal sql error
+	 * Returns "SUCCESS" if there is no error
+	 * */
 	public static String tryAddResults(String username, String win_or_loss, Integer kills, Integer deaths) {
 		Connection conn = null;
 		Statement st = null;
@@ -62,12 +68,13 @@ public class DatabaseMutator {
 				current_deaths = rs.getInt("deaths");
 				
 				PreparedStatement insert_statement = conn.prepareStatement("INSERT INTO PlayerStats "
-						+ "(wins, losses, kills, deaths) VALUES (?, ?, ?, ?)");
+						+ "(userName, wins, losses, kills, deaths) VALUES (?, ?, ?, ?, ?)");
 				
-				insert_statement.setInt(1, current_wins + win);
-				insert_statement.setInt(2, current_losses + loss);
-				insert_statement.setInt(3, current_kills + kills);
-				insert_statement.setInt(4, current_deaths + deaths);
+				insert_statement.setString(1, username);
+				insert_statement.setInt(2, current_wins + win);
+				insert_statement.setInt(3, current_losses + loss);
+				insert_statement.setInt(4, current_kills + kills);
+				insert_statement.setInt(5, current_deaths + deaths);
 				
 				insert_statement.executeUpdate();
 			}
@@ -99,6 +106,12 @@ public class DatabaseMutator {
 		return "SUCCESS";
 	}	
 	
+	/*
+	 * Attempts to add user to MySQL Database
+	 * Returns "FAILED: ACCOUNTS_EXISTS" if an account already exists
+	 * Returns "FAILED: SQL_ERROR" if there is an internal sql error
+	 * Returns "SUCCESS" if there is no error
+	 * */
 	public static String tryAddUser(String username, String password) {
 		
 		Connection conn = null;
@@ -129,6 +142,7 @@ public class DatabaseMutator {
 			
 		} catch (SQLException sqle) {
 			System.out.println("sqle: " + sqle.getMessage());
+			return "FAILED: SQL_ERROR";
 		}
 		 catch (InstantiationException e) {
 			e.printStackTrace();
@@ -158,6 +172,13 @@ public class DatabaseMutator {
 		return "SUCCESS";
 	}
 	
+	/*
+	 * Attempts to login user to MySQL Database
+	 * Returns "FAILED: NO_MATCHING_ACCOUNT" if no matching account exists
+	 * Returns "FAILED: SQL_ERROR" if there is an internal sql error
+	 *  Returns "FAILED: INCORRECT_PASSWORD" if the username is correct, but password is wrong
+	 * Returns "SUCCESS" if there is no error
+	 * */
 	public static String tryLogin(String username, String password) {
 		Connection conn = null;
 		Statement st = null;
