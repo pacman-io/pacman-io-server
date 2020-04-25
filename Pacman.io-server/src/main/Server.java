@@ -13,6 +13,7 @@ import com.corundumstudio.socketio.listener.DisconnectListener;
 
 import java.util.HashMap;
 import java.util.UUID;
+import java.util.Vector;
 import java.util.ArrayList;
 import java.util.Calendar;
 
@@ -41,6 +42,7 @@ class ServerThread extends Thread {
 	private HashMap<Integer, Player> players = new HashMap<Integer, Player>();
 	private HashMap<Integer, Pacman> pacmans = new HashMap<Integer, Pacman>();
 	private HashMap<Integer, Ghost> ghosts = new HashMap<Integer, Ghost>();
+	private Vector<Coordinate> removedDots = new Vector<Coordinate>();
 	private int playerID = 1;
 
 	public ServerThread(Configuration config) {
@@ -92,6 +94,7 @@ class ServerThread extends Thread {
 					client.sendEvent("allghosts", ghosts.values());
 					server.getBroadcastOperations().sendEvent("newghost", client, g);
 				}
+				client.sendEvent("removealldots", removedDots);
 			}
 		});
 
@@ -110,14 +113,13 @@ class ServerThread extends Thread {
 			}
 		});
 
-		server.addEventListener("test", SocketObject.class, new DataListener<SocketObject>() {
-
+		server.addEventListener("removedot", PlayerData.class, new DataListener<PlayerData>() {
 			@Override
-			public void onData(SocketIOClient client, SocketObject data, AckRequest ackSender) throws Exception {
-				System.out.println(data.message);
-
+			public void onData(SocketIOClient client, PlayerData data, AckRequest ackSender) throws Exception {
+				Coordinate c = new Coordinate(Double.parseDouble(data.x), Double.parseDouble(data.y));
+				removedDots.add(c);
+				server.getBroadcastOperations().sendEvent("removedot", client, c);
 			}
-
 		});
 	}
 
@@ -127,10 +129,6 @@ class ServerThread extends Thread {
 
 		}
 		server.stop();
-	}
-	
-	private void createGhost() {
-		
 	}
 }
 
