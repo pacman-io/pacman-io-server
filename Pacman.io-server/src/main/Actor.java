@@ -41,14 +41,19 @@ class Ghost extends Player {
 	public enum GhostState{
 		scatter, chase, dead
 	}
+	public enum GhostType{
+		Blinky, Speedy, Inky, Clyde
+	}
 	
 	public int kills;
 	public GhostState state;
+	public GhostType type;
 	public boolean isUnderControl;
 	
 	
-	public Ghost(double x, double y, int id, UUID uuid) {
+	public Ghost(double x, double y, int id, UUID uuid, GhostType type) {
 		super(x, y, id, uuid);
+		this.type = type;
 		kills = 0;
 		state = GhostState.chase;
 		isUnderControl = false;

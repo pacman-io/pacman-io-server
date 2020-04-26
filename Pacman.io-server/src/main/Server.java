@@ -11,6 +11,9 @@ import com.corundumstudio.socketio.listener.ConnectListener;
 import com.corundumstudio.socketio.listener.DataListener;
 import com.corundumstudio.socketio.listener.DisconnectListener;
 
+import main.Ghost.GhostState;
+import main.Ghost.GhostType;
+
 import java.util.HashMap;
 import java.util.UUID;
 import java.util.Vector;
@@ -67,8 +70,11 @@ class ServerThread extends Thread {
 						}
 							
 						else if(p.getClass() == Ghost.class) {
-							ghosts.remove(p.id);
-							server.getBroadcastOperations().sendEvent("remove", p.id, "ghost");
+							for(Integer i : ghosts.keySet()) {
+								server.getBroadcastOperations().sendEvent("remove", i, "ghost");
+								players.remove(i);
+							}
+							ghosts.clear();
 						}
 					}
 				}
@@ -78,21 +84,20 @@ class ServerThread extends Thread {
 		server.addEventListener("newplayer", SocketObject.class, new DataListener<SocketObject>() {
 			@Override
 			public void onData(SocketIOClient client, SocketObject data, AckRequest ackSender) throws Exception {
-				if(players.isEmpty()) {
+				if(pacmans.isEmpty()) {
 					Pacman p = new Pacman(13.0 * 16.0 + 8.0, 26.0 * 16.0 + 8.0, playerID, client.getSessionId());
 					players.put(playerID, p);
 					pacmans.put(playerID++, p);
-					client.sendEvent("allpacmans", pacmans.values());
-					client.sendEvent("allghosts", ghosts.values());
+					client.sendEvent("allpacmans", pacmans.values(), true);
+					client.sendEvent("allghosts", ghosts.values(), false);
 					server.getBroadcastOperations().sendEvent("newpacman", client, p);
 				}
-				else {
-					Ghost g = new Ghost(13.0 * 16.0 + 8.0, 26.0 * 16.0 + 8.0, playerID, client.getSessionId());
-					players.put(playerID, g);
-					ghosts.put(playerID++, g);
-					client.sendEvent("allpacmans", pacmans.values());
-					client.sendEvent("allghosts", ghosts.values());
-					server.getBroadcastOperations().sendEvent("newghost", client, g);
+				else if(ghosts.isEmpty()) {
+					createGhosts(client.getSessionId());
+					client.sendEvent("allpacmans", pacmans.values(), false);
+					client.sendEvent("allghosts", ghosts.values(), true);
+					for(int i = playerID-4; i < playerID; i++)
+						server.getBroadcastOperations().sendEvent("newghost", client, ghosts.get(i)); //Get Blinky by default
 				}
 				client.sendEvent("removealldots", removedDots);
 			}
@@ -122,7 +127,25 @@ class ServerThread extends Thread {
 			}
 		});
 	}
-
+	
+	public void createGhosts(UUID sessionID) {
+		Ghost blinky = new Ghost(11.0 * 16.0 + 8.0, 16.0 * 16.0 + 8.0, playerID, sessionID, GhostType.Blinky);
+		players.put(playerID, blinky);
+		ghosts.put(playerID++, blinky);
+		
+		Ghost speedy = new Ghost(16.0 * 16.0 + 8.0, 16.0 * 16.0 + 8.0, playerID, sessionID, GhostType.Speedy);
+		players.put(playerID, speedy);
+		ghosts.put(playerID++, speedy);
+		
+		Ghost inky = new Ghost(11.0 * 16.0 + 8.0, 18.0 * 16.0 + 8.0, playerID, sessionID, GhostType.Inky);
+		players.put(playerID, inky);
+		ghosts.put(playerID++, inky);
+		
+		Ghost clyde = new Ghost(16.0 * 16.0 + 8.0, 18.0 * 16.0 + 8.0, playerID, sessionID, GhostType.Clyde);
+		players.put(playerID, clyde);
+		ghosts.put(playerID++, clyde);
+	}
+	
 	public void run() {
 		server.start();
 		while (!isTerminated) {
