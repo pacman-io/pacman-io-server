@@ -1,41 +1,138 @@
 package main;
 
-import com.corundumstudio.socketio.Configuration;
-
-import java.lang.Math;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.UUID;
+import java.util.Vector;
 
 import com.corundumstudio.socketio.AckRequest;
+import com.corundumstudio.socketio.Configuration;
 import com.corundumstudio.socketio.SocketIOClient;
 import com.corundumstudio.socketio.SocketIOServer;
 import com.corundumstudio.socketio.listener.ConnectListener;
 import com.corundumstudio.socketio.listener.DataListener;
 import com.corundumstudio.socketio.listener.DisconnectListener;
 
-import main.Ghost.GhostState;
 import main.Ghost.GhostType;
 
-import java.util.HashMap;
-import java.util.UUID;
-import java.util.Vector;
-import java.util.ArrayList;
-import java.util.Calendar;
-
 public class Server {
-
+	
+	private static Vector<QueueThread> queueThreads = new Vector<QueueThread>();
+	private static Vector<Integer> availablePorts = new Vector<Integer>();
+	
 	public static void main(String[] args) {
-		Configuration config = new Configuration();
-		config.setHostname("localhost");
-		config.setPort(9092);
-		
 
-		ServerThread st = new ServerThread(config);
-		st.start();
+//		Configuration config = new Configuration();
+//		config.setHostname("localhost");
+//		config.setPort(9092);
+//		
+//		ServerThread st = new ServerThread(config);
+//		st.start();
+		for(int i = 9201; i < 9300; i++) {
+			availablePorts.add(i);
+		}
+		Server s = new Server(9200);
+	}
+
+	@SuppressWarnings("resource")
+	public Server(int port) {
+		
+		try {
+			ServerSocket ss = new ServerSocket(port);
+			while(true) {
+				Socket socket = ss.accept();
+				System.out.println("Accepted new socket");
+				QueueThread qt = new QueueThread(socket, this);
+				queueThreads.add(qt);
+				qt.start();
+				
+				if(queueThreads.size() >= 2) {
+					System.out.println("Starting match!");
+					QueueThread qt1 = queueThreads.remove(0);
+					QueueThread qt2 = queueThreads.remove(0);
+					
+					int p = availablePorts.remove(0);
+					qt1.startGame(p);
+					qt2.startGame(p);
+					System.out.println("Using port" + p);
+					Configuration config = new Configuration();
+					config.setHostname("localhost");
+					config.setPort(p);
+					ServerThread st = new ServerThread(config);
+					st.start();
+				}
+			}
+
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
+		
+	}
+	
+	public void removeThread(QueueThread qt) {
+		queueThreads.remove(qt);
 	}
 	
 	
 	public void createServer(int port) {
 		
 	}
+
+}
+
+class QueueThread extends Thread {
+	private Server server;
+	private Socket socket;
+	private ObjectOutputStream oos;
+	private ObjectInputStream ois;
+	
+	public QueueThread(Socket socket, Server server) {
+		try {
+			this.server = server;
+			this.socket = socket;
+			oos = new ObjectOutputStream(socket.getOutputStream());
+			ois = new ObjectInputStream(socket.getInputStream());
+		} catch (IOException ioe) {
+			ioe.printStackTrace();
+		}
+	}
+	
+	public void run() {
+		try {
+			while(true) {
+				Message request = (Message)ois.readObject();
+				reply(request);
+			}
+		} catch (IOException | ClassNotFoundException e) {
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void reply(Message message) {
+		if(!message.text.equals("connected")) {
+			server.removeThread(this);
+		}
+	}
+	
+	public Socket getSocket() {
+		return socket;
+	}
+	
+	public void startGame(int port) {
+		Message m= new Message(Integer.toString(port));
+		try {
+			oos.writeObject(m);
+			oos.flush();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}	
 
 }
 
@@ -106,7 +203,7 @@ class ServerThread extends Thread {
 		server.addEventListener("playermovemnet", PlayerData.class, new DataListener<PlayerData>() {
 			@Override
 			public void onData(SocketIOClient client, PlayerData data, AckRequest ackSender) throws Exception {
-				System.out.println(Util.getTime());
+				//System.out.println(Util.getTime());
 				Player p;
 				if((p = players.get(Integer.parseInt(data.id))) != null) {
 					p.x = Double.parseDouble(data.x);
