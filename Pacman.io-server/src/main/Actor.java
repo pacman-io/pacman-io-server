@@ -42,7 +42,7 @@ class Ghost extends Player {
 		scatter, chase, dead
 	}
 	public enum GhostType{
-		Blinky, Speedy, Inky, Clyde
+		blinky, speedy, inky, clyde
 	}
 	
 	public int kills;

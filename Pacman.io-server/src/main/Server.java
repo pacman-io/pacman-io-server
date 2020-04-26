@@ -129,19 +129,19 @@ class ServerThread extends Thread {
 	}
 	
 	public void createGhosts(UUID sessionID) {
-		Ghost blinky = new Ghost(11.0 * 16.0 + 8.0, 16.0 * 16.0 + 8.0, playerID, sessionID, GhostType.Blinky);
+		Ghost blinky = new Ghost(11.0 * 16.0 + 8.0, 16.0 * 16.0 + 8.0, playerID, sessionID, GhostType.blinky);
 		players.put(playerID, blinky);
 		ghosts.put(playerID++, blinky);
 		
-		Ghost speedy = new Ghost(16.0 * 16.0 + 8.0, 16.0 * 16.0 + 8.0, playerID, sessionID, GhostType.Speedy);
+		Ghost speedy = new Ghost(16.0 * 16.0 + 8.0, 16.0 * 16.0 + 8.0, playerID, sessionID, GhostType.speedy);
 		players.put(playerID, speedy);
 		ghosts.put(playerID++, speedy);
 		
-		Ghost inky = new Ghost(11.0 * 16.0 + 8.0, 18.0 * 16.0 + 8.0, playerID, sessionID, GhostType.Inky);
+		Ghost inky = new Ghost(11.0 * 16.0 + 8.0, 18.0 * 16.0 + 8.0, playerID, sessionID, GhostType.inky);
 		players.put(playerID, inky);
 		ghosts.put(playerID++, inky);
 		
-		Ghost clyde = new Ghost(16.0 * 16.0 + 8.0, 18.0 * 16.0 + 8.0, playerID, sessionID, GhostType.Clyde);
+		Ghost clyde = new Ghost(16.0 * 16.0 + 8.0, 18.0 * 16.0 + 8.0, playerID, sessionID, GhostType.clyde);
 		players.put(playerID, clyde);
 		ghosts.put(playerID++, clyde);
 	}
