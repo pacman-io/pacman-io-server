@@ -31,6 +31,7 @@ class PlayerData {
 	public String id;
 	public String type;
 	public String animation;
+	public String isInvincible;
 	
 	public PlayerData() {
 		

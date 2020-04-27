@@ -32,11 +32,13 @@ class Player extends Actor {
 class Pacman extends Player {
 	public int lives;
 	public int score;
+	public boolean isInvincible;
 	
 	public Pacman(double x, double y, int id, UUID uuid) {
 		super(x, y, id, uuid);
 		lives = 99;
 		score = 0;
+		isInvincible = false;
 	}
 	
 }

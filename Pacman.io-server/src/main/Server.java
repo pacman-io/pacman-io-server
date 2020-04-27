@@ -23,6 +23,7 @@ import com.corundumstudio.socketio.listener.DisconnectListener;
 import main.Ghost.GhostState;
 import main.Ghost.GhostType;
 
+
 public class Server {
 	
 	private static Vector<QueueThread> queueThreads = new Vector<QueueThread>();
@@ -38,6 +39,35 @@ public class Server {
 
 	@SuppressWarnings("resource")
 	public Server(int port) {
+		
+		try {
+			ServerSocket ss = new ServerSocket(port);
+			while(true) {
+				Socket socket = ss.accept();
+				System.out.println("Accepted new socket");
+				QueueThread qt = new QueueThread(socket, this);
+				queueThreads.add(qt);
+				
+				if(queueThreads.size() >= 2) {
+					System.out.println("Starting match!");
+					QueueThread qt1 = queueThreads.remove(0);
+					QueueThread qt2 = queueThreads.remove(0);
+					
+					int p = availablePorts.remove(0);
+					qt1.startGame(p);
+					qt2.startGame(p);
+					System.out.println("Using port" + p);
+					Configuration config = new Configuration();
+					config.setHostname("localhost");
+					config.setPort(p);
+					ServerThread st = new ServerThread(config, this, p);
+					st.start();
+				}
+			}
+
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
 		
 		try {
 			ServerSocket ss = new ServerSocket(port);
@@ -69,7 +99,6 @@ public class Server {
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
-		
 	}
 	
 	public void removeThread(QueueThread qt) {
@@ -134,6 +163,7 @@ class ServerThread extends Thread {
 	private HashMap<Integer, Ghost> ghosts = new HashMap<Integer, Ghost>();
 	private Vector<Coordinate> removedDots = new Vector<Coordinate>();
 	Timer ghostTimer;
+	Timer invincibilityTimer;
 	private int playerID = 1;
 
 	public ServerThread(Configuration config, Server mainServer, int port) {
@@ -193,7 +223,7 @@ class ServerThread extends Thread {
 					client.sendEvent("allghosts", ghosts.values(), true);
 					for(int i = playerID-4; i < playerID; i++)
 						server.getBroadcastOperations().sendEvent("newghost", client, ghosts.get(i)); //Get Blinky by default
-					createGhostStateTimer(10000L, 20000L);
+					createGhostStateTimer(5000L, 20000L);
 				}
 				client.sendEvent("removealldots", removedDots);
 			}
@@ -234,6 +264,28 @@ class ServerThread extends Thread {
 					server.getBroadcastOperations().sendEvent("endgame", "endgame");
 			}
 		});
+		
+		server.addEventListener("killghost", PlayerData.class, new DataListener<PlayerData>() {
+			@Override
+			public void onData(SocketIOClient client, PlayerData data, AckRequest ackSender) throws Exception {
+				server.getBroadcastOperations().sendEvent("killghost", client, data.id);
+			}
+		});
+		
+		server.addEventListener("setpacmaninvincible", PlayerData.class, new DataListener<PlayerData>() {
+			@Override
+			public void onData(SocketIOClient client, PlayerData data, AckRequest ackSender) throws Exception {
+				boolean isInvincible;
+				if(data.isInvincible.contentEquals("true")) {
+					isInvincible = true;
+				}
+				else
+					isInvincible = false;
+				pacmans.get(Integer.parseInt(data.id)).isInvincible = isInvincible;
+				server.getBroadcastOperations().sendEvent("setpacmaninvincible", Integer.parseInt(data.id), isInvincible);
+				createInvincibilityTimer(Integer.parseInt(data.id), 10000L);
+			}
+		});
 	}
 	
 	public void createGhosts(UUID sessionID) {
@@ -262,6 +314,18 @@ class ServerThread extends Thread {
 				sendGhostState();
 			}
 		}, delay, period);
+	}
+	
+	private void createInvincibilityTimer(int id, long period) {
+		invincibilityTimer = new Timer("Invincibility");
+		invincibilityTimer.schedule(new TimerTask() {
+
+			@Override
+			public void run() {
+				server.getBroadcastOperations().sendEvent("setpacmaninvincible", id, false);
+			}
+			
+		}, period);
 	}
 	
 	private void toggleGhostState() {
