@@ -26,17 +26,17 @@ public class Server {
 	private static Vector<Integer> availablePorts = new Vector<Integer>();
 	
 	public static void main(String[] args) {
-
-//		Configuration config = new Configuration();
-//		config.setHostname("localhost");
-//		config.setPort(9092);
-//		
-//		ServerThread st = new ServerThread(config);
-//		st.start();
+		
+		Configuration config = new Configuration();
+		config.setHostname("localhost");
+		config.setPort(9201);
+		ServerThread st = new ServerThread(config);
+		st.start();
+		/*
 		for(int i = 9201; i < 9300; i++) {
 			availablePorts.add(i);
 		}
-		Server s = new Server(9200);
+		Server s = new Server(9200);*/
 	}
 
 	@SuppressWarnings("resource")
