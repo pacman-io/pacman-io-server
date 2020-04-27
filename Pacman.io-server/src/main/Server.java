@@ -43,22 +43,23 @@ public class Server {
 				System.out.println("Accepted new socket");
 				QueueThread qt = new QueueThread(socket, this);
 				queueThreads.add(qt);
-				qt.start();
 				
-				if(queueThreads.size() >= 2) {
-					System.out.println("Starting match!");
-					QueueThread qt1 = queueThreads.remove(0);
-					QueueThread qt2 = queueThreads.remove(0);
-					
-					int p = availablePorts.remove(0);
-					qt1.startGame(p);
-					qt2.startGame(p);
-					System.out.println("Using port" + p);
-					Configuration config = new Configuration();
-					config.setHostname("localhost");
-					config.setPort(p);
-					ServerThread st = new ServerThread(config);
-					st.start();
+				while(queueThreads.size() >= 2) {
+					if(!availablePorts.isEmpty()) {
+						System.out.println("Starting match!");
+						QueueThread qt1 = queueThreads.remove(0);
+						QueueThread qt2 = queueThreads.remove(0);
+						
+						int p = availablePorts.remove(0);
+						qt1.startGame(p);
+						qt2.startGame(p);
+						System.out.println("Using port" + p);
+						Configuration config = new Configuration();
+						config.setHostname("localhost");
+						config.setPort(p);
+						ServerThread st = new ServerThread(config, this, p);
+						st.start();						
+					}
 				}
 			}
 
@@ -73,13 +74,21 @@ public class Server {
 	}
 	
 	
-	public void createServer(int port) {
-		
+	public synchronized static void addPort(int port) {
+		availablePorts.add(0, port);
 	}
 
+	public synchronized static boolean portExists(int port) {
+		if(availablePorts.contains(port)) {
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
 }
 
-class QueueThread extends Thread {
+class QueueThread {
 	private Server server;
 	private Socket socket;
 	private ObjectOutputStream oos;
@@ -93,24 +102,6 @@ class QueueThread extends Thread {
 			ois = new ObjectInputStream(socket.getInputStream());
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
-		}
-	}
-	
-	public void run() {
-		try {
-			while(true) {
-				Message request = (Message)ois.readObject();
-				reply(request);
-			}
-		} catch (IOException | ClassNotFoundException e) {
-			e.printStackTrace();
-		}
-		
-	}
-	
-	public void reply(Message message) {
-		if(!message.text.equals("connected")) {
-			server.removeThread(this);
 		}
 	}
 	
@@ -131,6 +122,8 @@ class QueueThread extends Thread {
 }
 
 class ServerThread extends Thread {
+	private static Server mainServer;
+	private int port;
 	private SocketIOServer server;
 	private boolean isTerminated = false;
 	private HashMap<Integer, Player> players = new HashMap<Integer, Player>();
@@ -139,7 +132,9 @@ class ServerThread extends Thread {
 	private Vector<Coordinate> removedDots = new Vector<Coordinate>();
 	private int playerID = 1;
 
-	public ServerThread(Configuration config) {
+	public ServerThread(Configuration config, Server mainServer, int port) {
+		this.mainServer = mainServer;
+		this.port = port;
 		server = new SocketIOServer(config);
 
 		server.addConnectListener(new ConnectListener() {
@@ -152,6 +147,7 @@ class ServerThread extends Thread {
 		server.addDisconnectListener(new DisconnectListener() {
 			@Override
 			public void onDisconnect(SocketIOClient client) {
+				System.out.println("Disconnected clients");
 				for(Player p : players.values()) {
 					if(client.getSessionId().equals(p.uuid)) {
 						players.remove(p.id);
@@ -168,6 +164,10 @@ class ServerThread extends Thread {
 							ghosts.clear();
 						}
 					}
+				}
+				if(!Server.portExists(port)) {
+					Server.addPort(port);
+					System.out.println("port " + port + " added");
 				}
 			}
 		});
@@ -243,6 +243,8 @@ class ServerThread extends Thread {
 
 		}
 		server.stop();
+
+		//mainServer.addPort(port);
 	}
 }
 
