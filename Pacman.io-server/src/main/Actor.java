@@ -2,6 +2,8 @@ package main;
 
 import java.util.UUID;
 
+
+
 class Actor {
 	public double x;
 	public double y;
@@ -17,10 +19,12 @@ class Actor {
 
 class Player extends Actor {
 	public UUID uuid;
+	public String animation;
 	
 	public Player(double x, double y, int id, UUID uuid) {
 		super(x, y, id);
 		this.uuid = uuid;
+		animation = "";
 	}
 	
 }
@@ -55,7 +59,7 @@ class Ghost extends Player {
 		super(x, y, id, uuid);
 		this.type = type;
 		kills = 0;
-		state = GhostState.chase;
+		state = GhostState.scatter;
 		isUnderControl = false;
 	}
 	
