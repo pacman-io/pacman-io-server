@@ -9,6 +9,8 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.UUID;
 import java.util.Vector;
+import java.util.TimerTask;
+import java.util.Timer;
 
 import com.corundumstudio.socketio.AckRequest;
 import com.corundumstudio.socketio.Configuration;
@@ -18,6 +20,7 @@ import com.corundumstudio.socketio.listener.ConnectListener;
 import com.corundumstudio.socketio.listener.DataListener;
 import com.corundumstudio.socketio.listener.DisconnectListener;
 
+import main.Ghost.GhostState;
 import main.Ghost.GhostType;
 
 public class Server {
@@ -143,6 +146,7 @@ class ServerThread extends Thread {
 	private HashMap<Integer, Pacman> pacmans = new HashMap<Integer, Pacman>();
 	private HashMap<Integer, Ghost> ghosts = new HashMap<Integer, Ghost>();
 	private Vector<Coordinate> removedDots = new Vector<Coordinate>();
+	Timer ghostTimer;
 	private int playerID = 1;
 
 	public ServerThread(Configuration config) {
@@ -195,6 +199,7 @@ class ServerThread extends Thread {
 					client.sendEvent("allghosts", ghosts.values(), true);
 					for(int i = playerID-4; i < playerID; i++)
 						server.getBroadcastOperations().sendEvent("newghost", client, ghosts.get(i)); //Get Blinky by default
+					createGhostStateTimer(10000L, 20000L);
 				}
 				client.sendEvent("removealldots", removedDots);
 			}
@@ -209,6 +214,7 @@ class ServerThread extends Thread {
 					p.x = Double.parseDouble(data.x);
 					p.y = Double.parseDouble(data.y);
 					p.angle = Integer.parseInt(data.angle);
+					p.animation = data.animation;
 					server.getBroadcastOperations().sendEvent("playermovemnet", client, p, data.type);
 				}
 
@@ -221,6 +227,17 @@ class ServerThread extends Thread {
 				Coordinate c = new Coordinate(Double.parseDouble(data.x), Double.parseDouble(data.y));
 				removedDots.add(c);
 				server.getBroadcastOperations().sendEvent("removedot", client, c);
+			}
+		});
+		
+		server.addEventListener("killpacman", PlayerData.class, new DataListener<PlayerData>() {
+			@Override
+			public void onData(SocketIOClient client, PlayerData data, AckRequest ackSender) throws Exception {
+				server.getBroadcastOperations().sendEvent("killpacman", client, data.id);
+				Pacman p = pacmans.get(Integer.parseInt(data.id));
+				p.lives--;
+				if(p.lives < 0)
+					server.getBroadcastOperations().sendEvent("endgame", "endgame");
 			}
 		});
 	}
@@ -241,6 +258,28 @@ class ServerThread extends Thread {
 		Ghost clyde = new Ghost(16.0 * 16.0 + 8.0, 18.0 * 16.0 + 8.0, playerID, sessionID, GhostType.clyde);
 		players.put(playerID, clyde);
 		ghosts.put(playerID++, clyde);
+	}
+	
+	private void createGhostStateTimer(long delay, long period) {
+		ghostTimer = new Timer("GhostTimer");
+		ghostTimer.schedule(new TimerTask() {
+			public void run() {
+				toggleGhostState();
+				sendGhostState();
+			}
+		}, delay, period);
+	}
+	
+	private void toggleGhostState() {
+		for(Ghost g : ghosts.values())
+			if(g.state == GhostState.chase)
+				g.state = GhostState.scatter;
+			else if(g.state == GhostState.scatter)
+				g.state = GhostState.chase;
+	}
+	
+	private void sendGhostState() {
+		server.getBroadcastOperations().sendEvent("updateghoststate", ghosts.values());
 	}
 	
 	public void run() {
