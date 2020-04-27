@@ -36,7 +36,7 @@ class Pacman extends Player {
 	
 	public Pacman(double x, double y, int id, UUID uuid) {
 		super(x, y, id, uuid);
-		lives = 99;
+		lives = 3;
 		score = 0;
 		isInvincible = false;
 	}

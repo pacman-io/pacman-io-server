@@ -250,6 +250,10 @@ class ServerThread extends Thread {
 			public void onData(SocketIOClient client, PlayerData data, AckRequest ackSender) throws Exception {
 				Coordinate c = new Coordinate(Double.parseDouble(data.x), Double.parseDouble(data.y));
 				removedDots.add(c);
+				pacmans.get(Integer.parseInt(data.id)).score += 100;
+				if(pacmans.get(Integer.parseInt(data.id)).score >= 24000) {
+					server.getBroadcastOperations().sendEvent("endgame", "pacman", pacmans.get(Integer.parseInt(data.id)).score);
+				}
 				server.getBroadcastOperations().sendEvent("removedot", client, c);
 			}
 		});
@@ -261,7 +265,7 @@ class ServerThread extends Thread {
 				Pacman p = pacmans.get(Integer.parseInt(data.id));
 				p.lives--;
 				if(p.lives < 0)
-					server.getBroadcastOperations().sendEvent("endgame", "endgame");
+					server.getBroadcastOperations().sendEvent("endgame", "ghost", 3);
 			}
 		});
 		
